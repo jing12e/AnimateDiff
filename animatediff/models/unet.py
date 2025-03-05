@@ -42,11 +42,14 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
     def __init__(
         self,
         sample_size: Optional[int] = None,
+        # why 4? vae output 4?
         in_channels: int = 4,
         out_channels: int = 4,
         center_input_sample: bool = False,
         flip_sin_to_cos: bool = True,
-        freq_shift: int = 0,      
+        freq_shift: int = 0,
+
+        # downsampling: why only crossattention block, no resnet block?
         down_block_types: Tuple[str] = (
             "CrossAttnDownBlock3D",
             "CrossAttnDownBlock3D",
@@ -62,14 +65,19 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         ),
         only_cross_attention: Union[bool, Tuple[bool]] = False,
         block_out_channels: Tuple[int] = (320, 640, 1280, 1280),
+        # ?
         layers_per_block: int = 2,
+        # Conv3D 在降采样时的填充量，防止边界信息丢失。
         downsample_padding: int = 1,
         mid_block_scale_factor: float = 1,
         act_fn: str = "silu",
+        # GroupNorm
         norm_num_groups: int = 32,
         norm_eps: float = 1e-5,
+        # text embedding dimension
         cross_attention_dim: int = 1280,
         attention_head_dim: Union[int, Tuple[int]] = 8,
+        # Text-to-Video Attention之外，增加Frame-to-Frame Cross-Attention
         dual_cross_attention: bool = False,
         use_linear_projection: bool = False,
         class_embed_type: Optional[str] = None,
@@ -82,6 +90,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         # Additional
         use_motion_module              = False,
         motion_module_resolutions      = ( 1,2,4,8 ),
+        # 是否在 Mid Block使用运动模块
         motion_module_mid_block        = False,
         motion_module_decoder_only     = False,
         motion_module_type             = None,
@@ -92,15 +101,18 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         super().__init__()
         
         self.sample_size = sample_size
+        # 320*4 =1280 why?
         time_embed_dim = block_out_channels[0] * 4
 
         # input
+        # in_channels = 4 -> block_out_channels[0] = 320
+        # (B,4,T,H,W) -> (B,320,T,H,W)
         self.conv_in = InflatedConv3d(in_channels, block_out_channels[0], kernel_size=3, padding=(1, 1))
 
         # time
         self.time_proj = Timesteps(block_out_channels[0], flip_sin_to_cos, freq_shift)
         timestep_input_dim = block_out_channels[0]
-
+        # (B,320)->(B,1280)
         self.time_embedding = TimestepEmbedding(timestep_input_dim, time_embed_dim)
 
         # class embedding
@@ -124,6 +136,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             attention_head_dim = (attention_head_dim,) * len(down_block_types)
 
         # down
+        # output_channel 320
         output_channel = block_out_channels[0]
         for i, down_block_type in enumerate(down_block_types):
             res = 2 ** i
@@ -133,11 +146,11 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
 
             down_block = get_down_block(
                 down_block_type,
-                num_layers=layers_per_block,
+                num_layers=layers_per_block, # 2
                 in_channels=input_channel,
                 out_channels=output_channel,
                 temb_channels=time_embed_dim,
-                add_downsample=not is_final_block,
+                add_downsample=not is_final_block, # final block不加downsample
                 resnet_eps=norm_eps,
                 resnet_act_fn=act_fn,
                 resnet_groups=norm_num_groups,
@@ -191,9 +204,13 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         self.num_upsamplers = 0
 
         # up
+        # block_out_channels = (320,640,1280,1280)
+        # reversed_block_out_channels = (1280, 1280, 640, 320)
+
         reversed_block_out_channels = list(reversed(block_out_channels))
         reversed_attention_head_dim = list(reversed(attention_head_dim))
         only_cross_attention = list(reversed(only_cross_attention))
+        # output_channel = 1280
         output_channel = reversed_block_out_channels[0]
         for i, up_block_type in enumerate(up_block_types):
             res = 2 ** (3 - i)
@@ -570,3 +587,27 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         print(f"### Motion Module Parameters: {sum(params) / 1e6} M")
         
         return model
+
+from torchinfo import summary
+import netron
+
+if __name__ == "__main__":
+    model = UNet3DConditionModel(layers_per_block=2)
+
+    batch_size = 1
+    in_channels = 4
+    T, H, W = 16, 64, 64
+    sample = torch.randn(batch_size, in_channels, T, H, W)  # 随机输入
+    timestep = torch.tensor([10])
+    encoder_hidden_states = torch.randn(batch_size, 77, 1280)  # 模拟文本编码
+
+    model_summary = summary(
+        model,
+        input_data=(sample, timestep, encoder_hidden_states),
+        col_names=["input_size", "output_size", "num_params"],
+        depth=6,
+        verbose=0
+    )
+
+    with open("model_summary.md", "w") as f:
+        f.write(str(model_summary))

@@ -10,7 +10,7 @@ from .motion_module import get_motion_module
 import pdb
 
 def get_down_block(
-    down_block_type,
+    down_block_type, # DownBlock3D or CrossAttnDownBlock3D
     num_layers,
     in_channels,
     out_channels,
@@ -61,7 +61,7 @@ def get_down_block(
         if cross_attention_dim is None:
             raise ValueError("cross_attention_dim must be specified for CrossAttnDownBlock3D")
         return CrossAttnDownBlock3D(
-            num_layers=num_layers,
+            num_layers=num_layers, # 一般设置为2
             in_channels=in_channels,
             out_channels=out_channels,
             temb_channels=temb_channels,
@@ -285,7 +285,7 @@ class CrossAttnDownBlock3D(nn.Module):
         out_channels: int,
         temb_channels: int,
         dropout: float = 0.0,
-        num_layers: int = 1,
+        num_layers: int = 1, # 一般设置为2
         resnet_eps: float = 1e-6,
         resnet_time_scale_shift: str = "default",
         resnet_act_fn: str = "swish",
@@ -295,7 +295,7 @@ class CrossAttnDownBlock3D(nn.Module):
         cross_attention_dim=1280,
         output_scale_factor=1.0,
         downsample_padding=1,
-        add_downsample=True,
+        add_downsample=True, # why?
         dual_cross_attention=False,
         use_linear_projection=False,
         only_cross_attention=False,
@@ -318,6 +318,7 @@ class CrossAttnDownBlock3D(nn.Module):
         self.has_cross_attention = True
         self.attn_num_head_channels = attn_num_head_channels
 
+        # for per layer, 1 resnetblock + transformer3d block + motion module
         for i in range(num_layers):
             in_channels = in_channels if i == 0 else out_channels
             resnets.append(

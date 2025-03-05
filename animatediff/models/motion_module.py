@@ -46,7 +46,7 @@ def get_motion_module(
     else:
         raise ValueError
 
-
+# 封装了 TemporalTransformer3DModel，负责Temporal Modeling
 class VanillaTemporalModule(nn.Module):
     def __init__(
         self,

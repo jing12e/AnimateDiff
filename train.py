@@ -336,9 +336,12 @@ def main(
             video_length = pixel_values.shape[1]
             with torch.no_grad():
                 if not image_finetune:
+                    # (B, T, C, H, W)-> (B*T, C, H, W)
                     pixel_values = rearrange(pixel_values, "b f c h w -> (b f) c h w")
+                    # (B*T, C, H, W)-> (B*T, 4, H,W)
                     latents = vae.encode(pixel_values).latent_dist
                     latents = latents.sample()
+                    # (B*T, 4, H,W)-> (B, 4, T, H, W): the input of unet
                     latents = rearrange(latents, "(b f) c h w -> b c f h w", f=video_length)
                 else:
                     latents = vae.encode(pixel_values).latent_dist

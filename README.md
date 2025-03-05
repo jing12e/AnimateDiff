@@ -1,5 +1,20 @@
 # AnimateDiff
 
+This is my implementation of AnimateDiff.
+
+Here is the note when I am replicating the code.
+[note](note.md)
+
+
+
+
+
+
+
+
+
+---
+
 This repository is the official implementation of [AnimateDiff](https://arxiv.org/abs/2307.04725) [ICLR2024 Spotlight].
 It is a plug-and-play module turning most community text-to-image models into animation generators, without the need of additional training.
 
