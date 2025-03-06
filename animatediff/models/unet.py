@@ -109,8 +109,9 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         # (B,4,T,H,W) -> (B,320,T,H,W)
         self.conv_in = InflatedConv3d(in_channels, block_out_channels[0], kernel_size=3, padding=(1, 1))
 
-        # time
+        # time 用大小为 320 的向量来表示时间步
         self.time_proj = Timesteps(block_out_channels[0], flip_sin_to_cos, freq_shift)
+        # timestep_input_dim = 32
         timestep_input_dim = block_out_channels[0]
         # (B,320)->(B,1280)
         self.time_embedding = TimestepEmbedding(timestep_input_dim, time_embed_dim)
@@ -400,6 +401,9 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
         timesteps = timesteps.expand(sample.shape[0])
 
+        # t_emb = self.time_proj(timesteps)
+        # 这一步会把整数 / 浮点型的 timesteps 转换为一个更底层的向量表示（常见做法是正弦余弦位置编码）。
+        # 输出大小通常是 (batch_size, some_dim)，比如 (batch_size, 320)。
         t_emb = self.time_proj(timesteps)
 
         # timesteps does not contain any weights and will always return f32 tensors
@@ -589,10 +593,9 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         return model
 
 from torchinfo import summary
-import netron
 
 if __name__ == "__main__":
-    model = UNet3DConditionModel(layers_per_block=2)
+    model = UNet3DConditionModel(layers_per_block=2,use_motion_module=True,motion_module_type="Vanilla")
 
     batch_size = 1
     in_channels = 4

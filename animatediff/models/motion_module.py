@@ -46,7 +46,7 @@ def get_motion_module(
     else:
         raise ValueError
 
-# 封装了 TemporalTransformer3DModel，负责Temporal Modeling
+# 封装了TemporalTransformer3DModel,负责Temporal Modeling
 class VanillaTemporalModule(nn.Module):
     def __init__(
         self,
@@ -85,6 +85,7 @@ class VanillaTemporalModule(nn.Module):
 
 
 class TemporalTransformer3DModel(nn.Module):
+    # input (b,c,f,h,w)
     def __init__(
         self,
         in_channels,
@@ -111,6 +112,7 @@ class TemporalTransformer3DModel(nn.Module):
         self.norm = torch.nn.GroupNorm(num_groups=norm_num_groups, num_channels=in_channels, eps=1e-6, affine=True)
         self.proj_in = nn.Linear(in_channels, inner_dim)
 
+        # 循环多层TemporalTransformerBlock
         self.transformer_blocks = nn.ModuleList(
             [
                 TemporalTransformerBlock(
@@ -244,7 +246,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:, :x.size(1)]
         return self.dropout(x)
 
-
+# Temporal Attention
 class VersatileAttention(CrossAttention):
     def __init__(
             self,

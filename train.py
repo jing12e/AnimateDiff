@@ -46,6 +46,7 @@ def init_dist(launcher="slurm", backend='nccl', port=29500, **kwargs):
     if launcher == 'pytorch':
         rank = int(os.environ['RANK'])
         num_gpus = torch.cuda.device_count()
+
         local_rank = rank % num_gpus
         torch.cuda.set_device(local_rank)
         dist.init_process_group(backend=backend, **kwargs)

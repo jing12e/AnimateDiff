@@ -28,8 +28,8 @@ noise_scheduler_kwargs:
   clip_sample:         false
 
 train_data:
-  csv_path:        "path_to_csv_file"
-  video_folder:    "path_to_video_foler"
+  csv_path:        "/home/jing/Desktop/AnimateDiff/datasets/webvid_2k_train.csv"
+  video_folder:    "/home/jing/Desktop/AnimateDiff/datasets/webvid_videos"
   sample_size:     256
   sample_stride:   4
   sample_n_frames: 16
